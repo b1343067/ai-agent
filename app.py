@@ -32,7 +32,7 @@ with st.sidebar:
 col1, col2 = st.columns([1, 1])
 
 with col1:
-    st.image("https://github.com/streamlit/fluent-ui-icons/raw/main/icons/Financial.png", width=100) # 暫代圖標
+    st.write("## 🏦") # 已修復：改用 Emoji 避免圖片網址失效破圖
     st.write("### 當前情境摘要")
     st.info(f"地區：{region}\n\n財政狀況：赤字 {deficit_gdp}%，債務 {debt_gdp}%\n\n通膨壓力：{inflation}%\n\n貨幣立場：{monetary_stance}")
 
@@ -50,9 +50,6 @@ st.divider()
 # AI 輸出區
 if analyze_btn:
     st.write("## 🤖 AI Agent 決策報告")
-    
-    # 這裡模擬 AI 產出的內容（如果你有 OpenAI API Key，可以換成真實調用）
-    # 對應 G8 提示詞範本內容
     
     tab1, tab2, tab3 = st.tabs(["政策協調分析", "模擬結果預測", "🌉 跨群橋梁 (G3 引用)"])
     
@@ -75,4 +72,4 @@ if analyze_btn:
         st.success("此摘要可直接複製給 G3 使用")
 
 else:
-    st.light("請點擊左側『開始 AI 決策分析』按鈕查看結果")
+    st.info("請點擊左側『開始 AI 決策分析』按鈕查看結果") # 已修復：解決 st.light 造成的 AttributeError
