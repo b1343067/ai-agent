@@ -16,13 +16,12 @@ st.title("🏦 財政與貨幣政策協調 AI Agent")
 st.subheader("第八組專題：總體政策模擬決策系統")
 
 # ==========================================
-# 優化 1：一鍵載入歷史經典情境
+# 側邊欄：一鍵載入歷史經典情境
 # ==========================================
 with st.sidebar:
     st.header("📂 情境資料庫")
     scenario = st.selectbox("快速載入歷史情境", ["自訂輸入 (當前現況)", "2022 疫情後大通膨", "2008 金融海嘯"])
     
-    # 根據選擇的情境，自動設定滑桿的預設值
     if scenario == "2022 疫情後大通膨":
         def_val, debt_val, cpi_val, rate_val = 12.3, 120.0, 9.1, 2.5
     elif scenario == "2008 金融海嘯":
@@ -35,13 +34,17 @@ with st.sidebar:
     
     deficit_gdp = st.slider("財政赤字 / GDP (%)", min_value=0.0, max_value=20.0, value=float(def_val), step=0.1)
     debt_gdp = st.slider("公債餘額 / GDP (%)", min_value=0.0, max_value=150.0, value=float(debt_val), step=0.1)
-    inflation = st.slider("通膨率 CPI (%)", min_value=-2.0, max_value=15.0, value=float(cpi_val), step=0.1)
+    inflation = st.slider("通膨率 CPI (%)", min_value=-5.0, max_value=15.0, value=float(cpi_val), step=0.1)
     policy_rate = st.slider("政策基準利率 (%)", min_value=0.0, max_value=10.0, value=float(rate_val), step=0.1)
     
     analyze_btn = st.button("啟動 AI 決策演算法")
 
-# 核心邏輯：AI 自動判斷貨幣政策立場
-if policy_rate > inflation + 1.0:
+# ==========================================
+# 核心邏輯：AI 自動判斷貨幣政策立場 (升級：加入零利率極端狀況)
+# ==========================================
+if policy_rate <= 1.0:
+    monetary_stance = "極度寬鬆 (零利率/QE)"
+elif policy_rate > inflation + 1.0:
     monetary_stance = "緊縮 (升息)"
 elif policy_rate < inflation - 0.5:
     monetary_stance = "寬鬆 (降息)"
@@ -60,23 +63,25 @@ with col1:
     m1.metric(label="財政赤字 / GDP", value=f"{deficit_gdp}%", delta="-警戒" if deficit_gdp > 5.0 else "安全", delta_color="inverse")
     m2.metric(label="公債餘額 / GDP", value=f"{debt_gdp}%", delta="持續攀升", delta_color="inverse")
     
-    # 優化 2：公債健康度視覺化血條
     st.caption("公債壓力指數")
-    progress_val = min(debt_gdp / 150.0, 1.0) # 換算成 0.0 ~ 1.0
+    progress_val = min(debt_gdp / 150.0, 1.0) 
     st.progress(progress_val)
     
     m3, m4 = st.columns(2)
-    m3.metric(label="通膨率 CPI", value=f"{inflation}%", delta="偏高" if inflation > 2.0 else "達標", delta_color="inverse")
+    # 升級：精準判斷通縮
+    cpi_status = "偏高" if inflation > 2.0 else ("通縮警戒" if inflation < 0 else "達標")
+    m3.metric(label="通膨率 CPI", value=f"{inflation}%", delta=cpi_status, delta_color="inverse")
     m4.metric(label="自動判定貨幣立場", value=monetary_stance, delta=f"基準利率 {policy_rate}%", delta_color="off")
 
 with col2:
     st.write("### AI 決策網路 (Policy)")
-    if inflation > 3.0:
+    # 升級：優先判斷經濟衰退與通縮
+    if inflation < 0.0:
+        st.error("❄️ 觀測狀態：嚴重通縮與衰退風險，系統建議『全面寬鬆與擴張刺激』")
+    elif inflation > 3.0:
         st.warning("⚠️ 觀測狀態：高通膨，系統優先尋求『緊縮協調』")
     elif deficit_gdp > 5.0:
-        st.error("🚨 觀測狀態：財政赤字過高，啟動『排擠效應』風險預警")
-    elif inflation < 0:
-        st.info("❄️ 觀測狀態：通縮風險，系統尋求『寬鬆刺激』")
+        st.warning("🚨 觀測狀態：財政赤字偏高，啟動『排擠效應』風險預警")
     else:
         st.success("✅ 觀測狀態：總體經濟指標穩定")
 
@@ -97,31 +102,46 @@ if analyze_btn:
     
     with tab1:
         st.markdown("### 1. 政策協調性評估")
-        if inflation > 3.0 and monetary_stance == "緊縮 (升息)" and deficit_gdp > 5.0:
+        
+        # 升級：加入 2008 金融海嘯 (情境二) 的專屬判斷
+        if inflation < 0.0 and monetary_stance == "極度寬鬆 (零利率/QE)" and deficit_gdp > 5.0:
+            st.success("✅ **非常規政策協調 (危機應對)**：系統偵測到通縮與衰退危機，央行已啟動極度寬鬆 (如 QE) 救市。此時政府擴大財政支出 (高赤字) 是彌補民間需求不足的必要手段，雙寬鬆政策完美協調。")
+            report_text += "[危機應對] 面臨通縮，極度寬鬆貨幣搭配高財政赤字為必要之救市手段。\n"
+            
+        elif inflation > 3.0 and monetary_stance == "緊縮 (升息)" and deficit_gdp > 5.0:
             st.error("❌ **政策衝突 (不協調)**：央行正在『升息』打通膨，但政府卻維持高赤字 (大撒幣)，兩者作用互相抵銷！建議政府應縮減支出以配合央行。")
             report_text += "[政策衝突] 央行升息與政府高赤字互相抵銷，應縮減支出。\n"
-        elif inflation > 2.0 and monetary_stance == "寬鬆 (降息)":
-            st.error("❌ **嚴重不協調**：目前通膨偏高，但貨幣政策卻『降息』放水，等於提油救火，將導致通膨失控。")
+            
+        elif inflation > 2.0 and ("寬鬆" in monetary_stance):
+            st.error("❌ **嚴重不協調**：目前通膨偏高，但貨幣政策卻放水，等於提油救火，將導致通膨失控。")
             report_text += "[嚴重不協調] 高通膨下實施寬鬆政策，將導致通膨失控。\n"
-        elif inflation < 0.0 and monetary_stance == "緊縮 (升息)":
+            
+        elif inflation < 0.0 and ("緊縮" in monetary_stance):
             st.error("❌ **經濟衰退危機**：已出現通縮現象，央行卻持續緊縮，將引發嚴重經濟衰退。")
             report_text += "[衰退危機] 通縮環境下持續升息，將引發嚴重衰退。\n"
+            
         elif inflation < 2.0 and deficit_gdp < 3.0 and monetary_stance == "緊縮 (升息)":
             st.warning("⚠️ **過度緊縮風險**：通膨已偏低且財政保守，若央行仍持續升息，恐壓抑經濟動能。")
             report_text += "[過度緊縮] 通膨偏低且財政保守，持續升息恐壓抑動能。\n"
+            
         else:
             st.success("✅ **目前政策尚屬協調**：貨幣與財政步調相對一致，有助於維持總體經濟穩定。")
             report_text += "[政策協調] 貨幣與財政步調一致，有助經濟穩定。\n"
             
     with tab2:
         st.markdown("### 2. 排擠效應與調整建議")
-        st.write("若政府在此刻擴大財政刺激，預計會導致市場利率上升，進而產生**排擠效應**。")
-        st.write("👉 **建議調整**：央行應維持目前利率水準，以防止債務貨幣化。")
-        report_text += "排擠效應警告：擴大刺激將推升利率，建議央行維持目前水位。\n"
+        if inflation < 0.0:
+            st.write("由於目前處於通縮與流動性陷阱邊緣，民間投資意願低落。此時政府擴大支出**不會產生排擠效應**。")
+            st.write("👉 **建議調整**：財政部應持續發力刺激需求，央行應維持零利率甚至啟動量化寬鬆 (QE)。")
+            report_text += "無排擠效應：通縮環境下應持續雙寬鬆刺激。\n"
+        else:
+            st.write("若政府在此刻擴大財政刺激，預計會導致市場利率上升，進而產生**排擠效應**。")
+            st.write("👉 **建議調整**：央行應維持目前利率水準，以防止債務貨幣化。")
+            report_text += "排擠效應警告：擴大刺激將推升利率，建議央行維持目前水位。\n"
         
         st.divider()
         st.markdown("#### 📊 政策執行後模擬走勢 (未來三季)")
-        if monetary_stance == "緊縮 (升息)":
+        if "緊縮" in monetary_stance:
             chart_data = pd.DataFrame({
                 "預估通膨率 CPI (%)": [inflation, inflation - 0.5, inflation - 1.2],
                 "預估財政赤字 (%)": [deficit_gdp, deficit_gdp + 0.2, deficit_gdp + 0.5]
@@ -141,15 +161,11 @@ if analyze_btn:
 else:
     st.info("👈 請於左側設定觀測指標，並點擊『啟動 AI 決策演算法』")
 
-# ==========================================
-# 優化 3：隱藏式防禦武器 (理論區)
-# ==========================================
-st.markdown("<br><br>", unsafe_allow_html=True) # 增加一些下方留白
 with st.expander("📚 系統核心理論與 MARL 架構對照 (點擊展開)"):
     st.markdown("""
     **本系統基於《貨幣銀行學》理論與 MARL 架構開發：**
     * **Agent (智能體)**：G8 財政貨幣協調決策系統。
     * **State (狀態)**：左側輸入之赤字率、債務比、通膨率與利率。
     * **Policy (策略)**：透過實質利率 (基準利率-通膨率) 判定貨幣立場，並比對赤字水位判斷是否發生衝突。
-    * **排擠效應 (Crowding Out)**：政府透過發行公債籌措擴張性財政政策之資金，導致市場利率攀升，進而使民間投資減少之現象。
+    * **排擠效應 (Crowding Out)**：政府透過發行公債籌措資金，導致利率攀升，但在**流動性陷阱 (如2008年)** 時此效應不顯著。
     """)
