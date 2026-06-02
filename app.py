@@ -3,7 +3,9 @@ import pandas as pd
 import time
 from datetime import datetime
 
-# 設定網頁標題與風格
+# ==========================================
+# 網頁基礎設定與樣式
+# ==========================================
 st.set_page_config(page_title="貨銀第八組 - 財政貨幣協調 AI Agent", layout="wide")
 
 st.markdown("""
@@ -17,7 +19,7 @@ st.title("🏦 財政與貨幣政策協調 AI Agent")
 st.subheader("第八組專題：總體政策模擬決策系統")
 
 # ==========================================
-# 側邊欄：一鍵載入歷史經典情境
+# 側邊欄：一鍵載入歷史經典情境與數據輸入
 # ==========================================
 with st.sidebar:
     st.header("📂 情境資料庫")
@@ -44,7 +46,7 @@ with st.sidebar:
     st.caption(f"🕒 系統最後同步時間：{datetime.now().strftime('%Y-%m-%d %H:%M')}")
 
 # ==========================================
-# 核心邏輯：AI 自動判斷貨幣政策立場
+# 核心邏輯：AI 自動判斷貨幣政策立場 (實質利率)
 # ==========================================
 if policy_rate <= 1.0:
     monetary_stance = "極度寬鬆"
@@ -60,7 +62,7 @@ else:
     rate_desc = f"基準利率 {policy_rate}%"
 
 # ==========================================
-# 主畫面內容：戰情儀表板
+# 主畫面內容：狀態空間看板 (State)
 # ==========================================
 col1, col2 = st.columns([1, 1])
 
@@ -94,7 +96,7 @@ with col2:
 st.divider()
 
 # ==========================================
-# AI 輸出區
+# AI 輸出區 (Action & Reward)
 # ==========================================
 if analyze_btn:
     with st.spinner('🤖 AI Agent 正在進行政策模擬與協調性運算...'):
@@ -107,6 +109,7 @@ if analyze_btn:
     
     is_conflict = False
     
+    # [Tab 1] 政策協調性分析
     with tab1:
         st.markdown("### 1. 政策協調性評估")
         
@@ -126,6 +129,7 @@ if analyze_btn:
         else:
             st.success("✅ **目前政策尚屬協調**：貨幣與財政步調相對一致，有助於維持總體經濟穩定。")
             
+    # [Tab 2] 排擠效應與模擬圖表
     with tab2:
         st.markdown("### 2. 排擠效應與調整建議")
         if inflation < 0.0:
@@ -148,16 +152,14 @@ if analyze_btn:
             
         st.area_chart(chart_data)
         
-    # ==========================================
-    # 優化：整合大盤 ETF 與長線均線技術面分析
-    # ==========================================
+    # [Tab 3] 資本市場分析
     with tab3:
         st.markdown("### 3. 資本市場風向預測")
         if "緊縮" in monetary_stance:
-            st.error("📉 **股市預警**：高利率環境將大幅提升企業資金成本。對於大型科技股（如 NVDA 等）的估值將面臨下修壓力。建議投資人可關注大盤指數 ETF（如 VOO）分散風險，並密切觀察大盤 30 週或 50 週長天期均線是否有跌破風險，作為防禦性減碼依據。")
+            st.error("📉 **股市預警**：高利率環境將大幅提升企業資金成本。對於大型科技股的估值將面臨下修壓力。建議關注大盤指數 ETF (如 VOO) 分散風險，並觀察大盤 30 週/50 週長天期均線是否有跌破風險，作為防禦性減碼依據。")
             st.success("📈 **債市預測**：由於處於升息循環，債券殖利率將維持高檔，短天期公債具備吸引力。")
         elif "寬鬆" in monetary_stance:
-            st.success("📈 **股市利多**：資金成本降低將有效挹注市場流動性。大盤指數 ETF（如 VOO）有望受惠於資金行情，特別是具備成長題材的科技巨頭（如 NVDA 等）預期將迎來強勁反彈。技術面上，若大盤突破 30 週均線可視為長線佈局訊號。")
+            st.success("📈 **股市利多**：資金成本降低將有效挹注市場流動性。大盤指數 ETF有望受惠於資金行情，科技巨頭預期將迎來強勁反彈。技術面上，若大盤突破 30 週均線可視為長線佈局訊號。")
             st.error("📉 **債市預測**：降息預期將帶動既有債券價格上漲，但新發行債券的殖利率將下滑。")
         else:
             st.info("⚖️ **市場觀望**：目前政策偏向中立，市場將回歸基本面檢視，大盤預期呈現區間震盪，建議維持既有步調與定期定額策略。")
@@ -167,37 +169,51 @@ if analyze_btn:
     # ==========================================
     # 神級優化：MARL 系統獎勵函數 (Reward) 算分機制
     # ==========================================
-    reward_score = 100
-    penalty_reasons = []
+    reward_score = 100 # 設定基礎分數為 100
+    score_reasons = []
 
+    # 1. 總體環境狀態評估 (State)
     if inflation > 3.0:
         reward_score -= 20
-        penalty_reasons.append("高通膨懲罰 (-20)")
+        score_reasons.append("高通膨環境 (-20)")
     elif inflation < 0:
         reward_score -= 30
-        penalty_reasons.append("通縮危機懲罰 (-30)")
+        score_reasons.append("通縮衰退環境 (-30)")
 
-    if deficit_gdp > 5.0:
+    # 2. 財政健康度評估 (排除通縮救市時的高赤字特例)
+    if deficit_gdp > 5.0 and inflation >= 0:
         reward_score -= 15
-        penalty_reasons.append("排擠效應風險懲罰 (-15)")
+        score_reasons.append("排擠效應風險 (-15)")
 
+    # 3. 政策協調度評估 (Action)
     if is_conflict:
         reward_score -= 30
-        penalty_reasons.append("政策衝突懲罰 (-30)")
+        score_reasons.append("政策衝突懲罰 (-30)")
+    elif inflation < 0.0 and monetary_stance == "極度寬鬆" and deficit_gdp > 5.0:
+        reward_score += 15 # 完美救市給予加分補償
+        score_reasons.append("危機完美救市獎勵 (+15)")
     else:
-        reward_score += 10
-        penalty_reasons.append("政策協調獎勵 (+10)")
+        score_reasons.append("政策維持協調 (+0)")
+
+    # 確保分數上限不超過 100 分
+    reward_score = min(reward_score, 100)
 
     st.markdown("#### 🏆 MARL 系統獎勵函數 (Reward) 評估")
     st.write("Agent 在多智能體強化學習中，透過最大化總體經濟的穩定性來獲取最高 Reward。")
     
-    # 使用 metric 顯示大大的分數
-    st.metric(label="Agent 當前決策網路總得分", value=f"{reward_score} / 110", delta="狀態極佳" if reward_score >= 90 else ("需立即調整政策" if reward_score < 60 else "狀態普通"), delta_color="normal" if reward_score >= 60 else "inverse")
-    st.caption(f"🧠 **模型算分依據**：基礎分數 100 分，本次結算包含：{', '.join(penalty_reasons)}。")
+    # 顯示總得分
+    st.metric(label="Agent 當前決策網路總得分", value=f"{reward_score} / 100", 
+              delta="決策極佳" if reward_score >= 85 else ("需調整政策" if reward_score < 70 else "狀態普通"), 
+              delta_color="normal" if reward_score >= 70 else "inverse")
+    
+    st.caption(f"🧠 **模型算分依據**：基礎分數 100 分。本次結算包含：{', '.join(score_reasons)}。")
 
 else:
     st.info("👈 請於左側設定觀測指標，並點擊『啟動 AI 決策演算法』")
 
+# ==========================================
+# 理論補充區
+# ==========================================
 with st.expander("📚 系統核心理論與 MARL 架構對照 (點擊展開)"):
     st.markdown("""
     **本系統基於《貨幣銀行學》理論與 MARL 架構開發：**
