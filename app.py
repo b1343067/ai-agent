@@ -40,7 +40,6 @@ with st.sidebar:
     
     analyze_btn = st.button("啟動 AI 決策演算法")
     
-    # 優化：真實系統時間戳記，取代原本的假連線狀態
     st.markdown("---")
     st.caption(f"🕒 系統最後同步時間：{datetime.now().strftime('%Y-%m-%d %H:%M')}")
 
@@ -104,10 +103,8 @@ if analyze_btn:
     
     st.write("## 🎯 AI Agent 決策報告 (Action)")
     
-    # 優化：新增資本市場影響的 Tab 3
     tab1, tab2, tab3 = st.tabs(["政策協調分析", "模擬結果預測", "📈 資本市場影響 (股市/債市)"])
     
-    # 判斷變數儲存，供最後的 LINE 戰報使用
     is_conflict = False
     
     with tab1:
@@ -151,32 +148,52 @@ if analyze_btn:
             
         st.area_chart(chart_data)
         
+    # ==========================================
+    # 優化：整合大盤 ETF 與長線均線技術面分析
+    # ==========================================
     with tab3:
         st.markdown("### 3. 資本市場風向預測")
         if "緊縮" in monetary_stance:
-            st.error("📉 **股市預警**：高利率環境將大幅提升企業資金成本。對於依賴未來現金流的**科技巨頭與成長板塊**，將面臨較大的估值下修壓力。建議投資人關注防禦型標的。")
-            st.success("📈 **債市預測**：由於處於升息循環，債券殖利率將維持高檔，短天期公債具備吸引力，但需留意長債價格波動風險。")
+            st.error("📉 **股市預警**：高利率環境將大幅提升企業資金成本。對於大型科技股（如 NVDA 等）的估值將面臨下修壓力。建議投資人可關注大盤指數 ETF（如 VOO）分散風險，並密切觀察大盤 30 週或 50 週長天期均線是否有跌破風險，作為防禦性減碼依據。")
+            st.success("📈 **債市預測**：由於處於升息循環，債券殖利率將維持高檔，短天期公債具備吸引力。")
         elif "寬鬆" in monetary_stance:
-            st.success("📈 **股市利多**：資金成本降低將有效挹注市場流動性。大盤指數（如 S&P 500）有望受惠於資金行情，**科技股與創新板塊**預期將迎來強勁反彈。")
+            st.success("📈 **股市利多**：資金成本降低將有效挹注市場流動性。大盤指數 ETF（如 VOO）有望受惠於資金行情，特別是具備成長題材的科技巨頭（如 NVDA 等）預期將迎來強勁反彈。技術面上，若大盤突破 30 週均線可視為長線佈局訊號。")
             st.error("📉 **債市預測**：降息預期將帶動既有債券價格上漲，但新發行債券的殖利率將下滑。")
         else:
-            st.info("⚖️ **市場觀望**：目前政策偏向中立，市場將回歸基本面檢視，大盤預期呈現區間震盪。")
+            st.info("⚖️ **市場觀望**：目前政策偏向中立，市場將回歸基本面檢視，大盤預期呈現區間震盪，建議維持既有步調與定期定額策略。")
         
     st.divider()
     
-    # 優化：LINE 自動排版戰報，適合數位行銷展示
-    st.markdown("#### 📱 數位金融應用：一鍵生成 LINE 社群戰報")
-    line_summary = f"""【🤖 G8 總經 AI 戰情室】
-📌 觀測狀態：
-🔹 財政赤字：{deficit_gdp}% | 公債餘額：{debt_gdp}%
-🔹 通膨率 CPI：{inflation}% | 基準利率：{policy_rate}%
+    # ==========================================
+    # 神級優化：MARL 系統獎勵函數 (Reward) 算分機制
+    # ==========================================
+    reward_score = 100
+    penalty_reasons = []
 
-💡 AI 貨幣立場診斷：{monetary_stance}
-⚠️ 政策協調警示：{'[偵測到政策衝突/風險]' if is_conflict else '[當前政策尚屬穩定]'}
+    if inflation > 3.0:
+        reward_score -= 20
+        penalty_reasons.append("高通膨懲罰 (-20)")
+    elif inflation < 0:
+        reward_score -= 30
+        penalty_reasons.append("通縮危機懲罰 (-30)")
 
-👉 核心建議：{'請審慎評估科技股估值壓力與排擠效應！' if '緊縮' in monetary_stance else '資金行情啟動，關注大盤反彈力道！'}
-"""
-    st.code(line_summary, language="markdown")
+    if deficit_gdp > 5.0:
+        reward_score -= 15
+        penalty_reasons.append("排擠效應風險懲罰 (-15)")
+
+    if is_conflict:
+        reward_score -= 30
+        penalty_reasons.append("政策衝突懲罰 (-30)")
+    else:
+        reward_score += 10
+        penalty_reasons.append("政策協調獎勵 (+10)")
+
+    st.markdown("#### 🏆 MARL 系統獎勵函數 (Reward) 評估")
+    st.write("Agent 在多智能體強化學習中，透過最大化總體經濟的穩定性來獲取最高 Reward。")
+    
+    # 使用 metric 顯示大大的分數
+    st.metric(label="Agent 當前決策網路總得分", value=f"{reward_score} / 110", delta="狀態極佳" if reward_score >= 90 else ("需立即調整政策" if reward_score < 60 else "狀態普通"), delta_color="normal" if reward_score >= 60 else "inverse")
+    st.caption(f"🧠 **模型算分依據**：基礎分數 100 分，本次結算包含：{', '.join(penalty_reasons)}。")
 
 else:
     st.info("👈 請於左側設定觀測指標，並點擊『啟動 AI 決策演算法』")
@@ -187,5 +204,5 @@ with st.expander("📚 系統核心理論與 MARL 架構對照 (點擊展開)"):
     * **Agent (智能體)**：G8 財政貨幣協調決策系統。
     * **State (狀態)**：左側輸入之赤字率、債務比、通膨率與利率。
     * **Policy (策略)**：透過實質利率 (基準利率-通膨率) 判定貨幣立場，並比對赤字水位判斷是否發生衝突。
-    * **排擠效應 (Crowding Out)**：政府透過發行公債籌措資金，導致利率攀升，但在**流動性陷阱 (如2008年)** 時此效應不顯著。
+    * **Reward (獎勵)**：將通膨、赤字與政策協調度量化為具體分數，驅使 Agent 追求經濟穩定。
     """)
