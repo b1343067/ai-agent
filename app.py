@@ -15,7 +15,7 @@ st.markdown("""
 st.title("🏦 財政與貨幣政策協調 AI Agent")
 st.subheader("第八組專題：總體政策模擬決策系統")
 
-# 側邊欄：輸入數據區 (動態滑桿 Slider)
+# 側邊欄：輸入數據區 (新增政策基準利率)
 with st.sidebar:
     st.header("📊 經濟數據輸入")
     region = st.selectbox("選擇研究地區", ["美國", "台灣", "自定義"])
@@ -23,9 +23,22 @@ with st.sidebar:
     deficit_gdp = st.slider("財政赤字 / GDP (%)", min_value=0.0, max_value=20.0, value=6.0, step=0.1)
     debt_gdp = st.slider("公債餘額 / GDP (%)", min_value=50.0, max_value=150.0, value=123.0, step=0.1)
     inflation = st.slider("通膨率 CPI (%)", min_value=-2.0, max_value=15.0, value=2.1, step=0.1)
-    monetary_stance = st.selectbox("目前貨幣政策立場", ["緊縮 (升息)", "中性", "寬鬆 (降息)"])
+    
+    # 讓使用者輸入利率，而非手動選擇立場
+    policy_rate = st.slider("政策基準利率 (%)", min_value=0.0, max_value=10.0, value=5.5, step=0.1)
     
     analyze_btn = st.button("開始 AI 決策分析")
+
+# ==========================================
+# 核心邏輯：AI 自動判斷貨幣政策立場
+# 判斷標準：比較基準利率與通膨率
+# ==========================================
+if policy_rate > inflation + 1.0:
+    monetary_stance = "緊縮 (升息)"
+elif policy_rate < inflation - 0.5:
+    monetary_stance = "寬鬆 (降息)"
+else:
+    monetary_stance = "中性"
 
 # 主畫面內容
 col1, col2 = st.columns([1, 1])
@@ -40,7 +53,8 @@ with col1:
     
     m3, m4 = st.columns(2)
     m3.metric(label="通膨率 CPI", value=f"{inflation}%", delta="偏高" if inflation > 2.0 else "達標", delta_color="inverse")
-    m4.metric(label="貨幣立場", value=monetary_stance)
+    # 將 AI 自動判定的立場顯示在這裡，並附帶利率數據
+    m4.metric(label="自動判定貨幣立場", value=monetary_stance, delta=f"基準利率 {policy_rate}%", delta_color="off")
 
 with col2:
     st.write("### AI 決策邏輯 (邏輯鏈)")
@@ -57,13 +71,12 @@ st.divider()
 if analyze_btn:
     st.write("## 🤖 AI Agent 決策報告")
     
-    # 保留兩個 Tab，對應財政貨幣協調的核心任務
     tab1, tab2 = st.tabs(["政策協調分析", "模擬結果預測"])
     
     with tab1:
         st.markdown("### 1. 政策協調性評估")
         
-        # 進階判斷邏輯：精準抓出政策衝突與不協調
+        # 進階判斷邏輯
         if inflation > 3.0 and monetary_stance == "緊縮 (升息)" and deficit_gdp > 5.0:
             st.error("❌ **政策衝突 (不協調)**：央行正在『升息』踩煞車打通膨，但政府財政赤字過高 (大撒幣踩油門)，兩者作用互相抵銷！建議政府應縮減支出以配合央行。")
             
